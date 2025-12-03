@@ -23,44 +23,36 @@ st.title("💾 Advanced Memory Management Suite")
 tab1, tab2, tab3, tab4 = st.tabs(["🚀 Algo Simulator", "⚙️ MMU Hardware", "📊 Comparison Arena", "🤖 OS Assistant"])
 
 # === TAB 1: ALGORITHMS ===
+# ... inside Tab 1 ...
 with tab1:
-    st.subheader("Step-by-Step Page Replacement Visualization")
-    algo_choice = st.radio("Algorithm Strategy", ["FIFO", "LRU", "Optimal"], horizontal=True)
+    st.subheader("Step-by-Step Visualization")
+    
+    # UPDATE THIS LINE TO INCLUDE LFU AND MRU
+    algo_choice = st.radio("Strategy", ["FIFO", "LRU", "Optimal", "LFU", "MRU"], horizontal=True)
+    # Ensure this is inside the 'try:' block in Tab 1
+    raw_items = [x.strip() for x in ref_string.split(",") if x.strip()]
+    pages = [int(x) for x in raw_items if x.isdigit()]
     
     if st.button("Run Simulation", type="primary"):
         try:
-            # --- THE FIX: Robust Input Parsing ---
-            # 1. Replace spaces with nothing (handles "1, 2" vs "1,2")
-            # 2. Split by comma
-            # 3. Filter out empty strings (handles trailing commas "1,2,")
-            # 4. Ensure only digits are processed
-            raw_items = [x.strip() for x in ref_string.split(",") if x.strip()]
-            pages = [int(x) for x in raw_items if x.isdigit()]
+            # ... (input parsing code) ...
             
-            if not pages:
-                st.error("Please enter at least one valid number.")
-            else:
-                # Run the selected algorithm
-                if algo_choice == "FIFO": f, h, hist = algorithms.solve_fifo(pages, capacity)
-                elif algo_choice == "LRU": f, h, hist = algorithms.solve_lru(pages, capacity)
-                else: f, h, hist = algorithms.solve_optimal(pages, capacity)
-                
-                # Metrics
-                c1, c2, c3 = st.columns(3)
-                c1.metric("Total Page Faults", f, delta_color="inverse")
-                c2.metric("Total Hits", h)
-                c3.metric("Hit Ratio", f"{h/len(pages)*100:.1f}%")
-                
-                # Visualization
-                df = pd.DataFrame(hist)
-                def highlight(val):
-                    if val == 'Hit':
-                        return 'background-color: #196F3D; color: white' # Dark Green
-                    elif val == 'Miss':
-                        return 'background-color: #943126; color: white' # Dark Red
-                    return ''
-                st.dataframe(df.style.applymap(highlight, subset=['Status']), use_container_width=True)
+            # UPDATE THIS BLOCK
+            if algo_choice == "FIFO": f, h, hist = algorithms.solve_fifo(pages, capacity)
+            elif algo_choice == "LRU": f, h, hist = algorithms.solve_lru(pages, capacity)
+            elif algo_choice == "LFU": f, h, hist = algorithms.solve_lfu(pages, capacity)
+            elif algo_choice == "MRU": f, h, hist = algorithms.solve_mru(pages, capacity)
+            else: f, h, hist = algorithms.solve_optimal(pages, capacity)
 
+                # Visualization
+            df = pd.DataFrame(hist)
+            def highlight(val):
+                if val == 'Hit':
+                    return 'background-color: #196F3D; color: white' # Dark Green
+                elif val == 'Miss':
+                    return 'background-color: #943126; color: white' # Dark Red
+                return ''
+            st.dataframe(df.style.applymap(highlight, subset=['Status']), use_container_width=True)
         except Exception as e:
             st.error(f"Error processing input: {e}")
             
@@ -135,19 +127,106 @@ Binary Analysis:
 
 # === TAB 3: COMPARISON ARENA ===
 with tab3:
-    st.subheader("Algorithm Efficiency Benchmark")
-    if st.button("Run Benchmark Test"):
-        pages = [int(x.strip()) for x in ref_string.split(",")]
-        f_fifo, _, _ = algorithms.solve_fifo(pages, capacity)
-        f_lru, _, _ = algorithms.solve_lru(pages, capacity)
-        f_opt, _, _ = algorithms.solve_optimal(pages, capacity)
+    st.header("📊 Algorithm Efficiency Benchmark")
+    
+    # 1. INPUT SECTION
+    st.caption("Compare how different algorithms handle the same workload.")
+    
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        # Re-parse input here to ensure it updates live
+        raw_items = [x.strip() for x in ref_string.split(",") if x.strip()]
+        pages = []
+        if raw_items:
+            pages = [int(x) for x in raw_items if x.isdigit()]
+
+    if not pages:
+        st.warning("Please enter a valid Reference String in the sidebar.")
+    else:
+        # --- SECTION A: CURRENT CONFIG COMPARISON ---
+        st.subheader(f"1. Snapshot Comparison (Frames: {capacity})")
         
-        data = {"FIFO": f_fifo, "LRU": f_lru, "Optimal": f_opt}
-        fig, ax = plt.subplots(figsize=(6,3))
-        bars = ax.bar(data.keys(), data.values(), color=['#FF9999', '#66B2FF', '#99FF99'])
-        ax.set_ylabel("Page Faults")
-        st.pyplot(fig)
-        st.info(f"🏆 Winner: {min(data, key=data.get)} with {min(data.values())} faults.")
+        if st.button("Run Snapshot Benchmark"):
+            # Run all algorithms
+            f1,_,_ = algorithms.solve_fifo(pages, capacity)
+            f2,_,_ = algorithms.solve_lru(pages, capacity)
+            f3,_,_ = algorithms.solve_optimal(pages, capacity)
+            f4,_,_ = algorithms.solve_lfu(pages, capacity)
+            f5,_,_ = algorithms.solve_mru(pages, capacity)
+            
+            # Plot Bar Chart
+            fig, ax = plt.subplots(figsize=(8, 3))
+            strategies = ["FIFO", "LRU", "OPT", "LFU", "MRU"]
+            faults = [f1, f2, f3, f4, f5]
+            colors = ['#FF9999', '#66B2FF', '#99FF99', '#FFCC99', '#D7BDE2']
+            
+            bars = ax.bar(strategies, faults, color=colors)
+            ax.set_ylabel("Page Faults")
+            
+            # Add labels
+            for bar in bars:
+                height = bar.get_height()
+                ax.annotate(f'{height}', xy=(bar.get_x() + bar.get_width() / 2, height),
+                            xytext=(0, 3), textcoords="offset points", ha='center', va='bottom')
+            
+            st.pyplot(fig)
+            
+            # Smart Insight
+            best_algo = strategies[faults.index(min(faults))]
+            st.success(f"🏆 Recommendation: Use **{best_algo}** for this specific workload.")
+
+        st.markdown("---")
+
+        # --- SECTION B: SENSITIVITY ANALYSIS (The New Feature) ---
+        st.subheader("2. Sensitivity Analysis (Belady's Anomaly Test)")
+        st.caption("How does increasing RAM (Frames) affect performance? Does adding more memory always help?")
+        
+        if st.button("Run Multi-Frame Stress Test"):
+            with st.spinner("Simulating hardware variations..."):
+                # Data structure to hold results: { "FIFO": [12, 10, 9...], "LRU": ... }
+                results = {"FIFO": [], "LRU": [], "OPT": []}
+                frame_range = range(3, 8) # Test frame sizes 3 to 7
+                
+                for f_size in frame_range:
+                    f_fifo,_,_ = algorithms.solve_fifo(pages, f_size)
+                    f_lru,_,_ = algorithms.solve_lru(pages, f_size)
+                    f_opt,_,_ = algorithms.solve_optimal(pages, f_size)
+                    
+                    results["FIFO"].append(f_fifo)
+                    results["LRU"].append(f_lru)
+                    results["OPT"].append(f_opt)
+                
+                # Plot Line Chart
+                fig2, ax2 = plt.subplots(figsize=(8, 4))
+                ax2.plot(frame_range, results["FIFO"], marker='o', label="FIFO", color='#FF9999', linestyle='--')
+                ax2.plot(frame_range, results["LRU"], marker='s', label="LRU", color='#66B2FF')
+                ax2.plot(frame_range, results["OPT"], marker='^', label="Optimal", color='#99FF99')
+                
+                ax2.set_xlabel("Number of Frames (RAM Size)")
+                ax2.set_ylabel("Total Page Faults")
+                ax2.set_title("Performance vs. Memory Size")
+                ax2.legend()
+                ax2.grid(True, linestyle=':', alpha=0.6)
+                
+                st.pyplot(fig2)
+                
+                # Check for Belady's Anomaly in FIFO
+                # (If faults INCREASE as frames INCREASE)
+                fifo_faults = results["FIFO"]
+                has_belady = False
+                for i in range(len(fifo_faults)-1):
+                    if fifo_faults[i+1] > fifo_faults[i]:
+                        has_belady = True
+                        break
+                
+                if has_belady:
+                    st.error("⚠️ **Belady's Anomaly Detected!** Increasing frame size actually hurt FIFO performance.")
+                    st.markdown("""
+                    **Explanation:** In FIFO, replacing pages without considering usage history can sometimes lead to *more* faults when memory increases. 
+                    [cite_start]This is a famous OS paradox[cite: 43].
+                    """)
+                else:
+                    st.info("✅ No anomalies detected. Performance improved or stayed stable as RAM increased.")
 
 # === TAB 4: CHATBOT ===
 with tab4:

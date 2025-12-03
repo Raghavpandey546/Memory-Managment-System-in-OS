@@ -3,3 +3,5 @@ pandas
 matplotlib
 pypdf
 scikit-learn
+textblob
+sumy
